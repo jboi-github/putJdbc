@@ -12,9 +12,13 @@ For more details see the usage page of these processors in Nifi.
 ## Getting started
 1. Link or clone this repository
 2. use maven to make the Nifi archive
+    ```bash
     mvn clean install
+    ```
 3. copy the NAR file to Nifi libs
+    ```bash
     cp ./nifi-teradata-nar/target/nifi-teradata-nar-3.0.nar ${NIFI_HOME}/lib/
+    ```
     where ${NIFI_HOME} is the installation directory of your NIFI installation
 4. restart NIFI
 Done!
