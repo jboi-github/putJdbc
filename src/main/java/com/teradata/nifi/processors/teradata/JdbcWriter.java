@@ -3,6 +3,7 @@
  */
 package com.teradata.nifi.processors.teradata;
 
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.ParameterMetaData;
 import java.sql.PreparedStatement;
@@ -63,17 +64,15 @@ class JdbcWriter implements AutoCloseable {
 			ComponentLog logger) throws SQLException {
 		
 		this.logger = logger;
-		
-		// Is connection ok?
+
+		// Is connection OK?
 		logWarnings(scriptConnection);
 		logWarnings(loadConnection);
 		
 		this.scriptConnection = scriptConnection;
 		this.loadConnection = loadConnection;
-		this.beforeScript = beforeScript;
-		this.eltScript = eltScript;
-		this.afterScript = afterScript;
-		this.insertStatement = insertStatement;
+		
+		resetSQL(beforeScript, insertStatement, eltScript, afterScript);
 		
 		// We do commit only after each load has finished
 		loadConnection.setAutoCommit(false);
@@ -84,17 +83,17 @@ class JdbcWriter implements AutoCloseable {
 		logWarnings(loadConnection);
 	}
 	
-	public String runBeforeScript() throws SQLException {return runScript(beforeScript);}
-	public String runEltScript() throws SQLException {return runScript(eltScript);}
-	public String runAfterScript() throws SQLException {return runScript(afterScript);}
+	public JSONArray runBeforeScript() throws SQLException {return runScript(beforeScript);}
+	public JSONArray runEltScript() throws SQLException {return runScript(eltScript);}
+	public JSONArray runAfterScript() throws SQLException {return runScript(afterScript);}
 
 	public void addRow(Object[] values) throws SQLException {
+		// Prepare statement as late as possible to avoid locks on table when before script is running.
+		prepare(loadConnection, insertStatement);
+		
 		if(values.length != preparedColumns.length) {
 			throw new IllegalArgumentException("values.length: " + values.length + ", expected: " + preparedColumns.length + " per number of parameters in prepared statement");
 		}
-		
-		// Prepare statement as late as possible to avoid locks on table when before script is running.
-		prepare(loadConnection, insertStatement);
 		
 		rowStart(preparedStatement);
 		for(int i=0; i<preparedColumns.length; i++) preparedColumns[i].bind(preparedStatement, i+1, values[i]);
@@ -102,18 +101,37 @@ class JdbcWriter implements AutoCloseable {
 	}
 	
 	public void transferBatch() throws SQLException {transferBatch(preparedStatement);}
-	public void commit() throws SQLException {commit(preparedStatement, loadConnection);}
-
-	@Override
-	public void close() throws SQLException {
-		SQLException e = null;
-		e = close(scriptConnection, e);
-		e = close(loadConnection, e);
-		
-		if(e!= null) throw e;
+	
+	public int transferCsv(InputStream in) throws SQLException {
+		try (PreparedStatement preparedStatement = loadConnection.prepareStatement(insertStatement)) {
+			logWarnings(preparedStatement);
+			
+			preparedStatement.setAsciiStream(1, in, -1);
+			logWarnings(preparedStatement);
+			
+			int updateCount = preparedStatement.executeUpdate();
+			logWarnings(preparedStatement);
+			
+			return updateCount;
+		}
 	}
 	
+	public void commit() throws SQLException {commit(loadConnection);}
+
+	@Override
+	public void close() {}
+	
 	public String getURL() throws SQLException {return loadConnection.getMetaData().getURL();}
+	
+	public void resetSQL(String beforeScript, String insertStatement, String eltScript, String afterScript) throws SQLException {
+		this.beforeScript = beforeScript;
+		this.eltScript = eltScript;
+		this.afterScript = afterScript;
+		this.insertStatement = insertStatement;
+		
+		if(preparedStatement != null && !preparedStatement.isClosed()) preparedStatement.close();
+		preparedStatement = null; 
+	}
 	
 	private void rowStart(PreparedStatement preparedStatement) throws SQLException {
 		preparedStatement.clearParameters();
@@ -142,43 +160,21 @@ class JdbcWriter implements AutoCloseable {
 	 * @param connection to be committed.
 	 * @throws SQLException
 	 */
-	private void commit(PreparedStatement preparedStatement, Connection connection) throws SQLException {
-		connection.commit();
-		preparedStatement.close();
-	}
-	
-	/**
-	 * @param connection to be closed
-	 * @param root a chain of SQLExceptions happened so far. Null if all operations were successful so far.
-	 * @return a chained SQLException if anything went wrong. On success root is returned unchanged.
-	 */
-	private SQLException close(Connection connection, SQLException root) {
-		try {
-			connection.close();
-		} catch(SQLException e) {
-			if(root != null) {
-				root.setNextException(e);
-				return root;
-			} else {
-				return e;
-			}
-		}
-		return root;
-	}
+	private void commit(Connection connection) throws SQLException {connection.commit();}
 	
 	/**
 	 * @param script with SQL statements to run against open scriptConnection.
 	 * @return ResulSets, update counts and ... as JSON document.
 	 * @throws SQLException 
 	 */
-	private String runScript(String script) throws SQLException {
+	private JSONArray runScript(String script) throws SQLException {
 		JSONArray json = new JSONArray();
-		if(script != null) try (Statement statement = scriptConnection.createStatement()) {
+		if(script != null && !script.trim().isEmpty()) try (Statement statement = scriptConnection.createStatement()) {
 			logWarnings(statement);
 			executeOneScript(script, statement, json);
 		}
 		if(!scriptConnection.getAutoCommit()) scriptConnection.commit();
-		return json.toString();
+		return json;
 	}
 	
 	private void executeOneScript(String script, Statement statement, JSONArray json) throws SQLException {
