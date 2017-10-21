@@ -1,33 +1,20 @@
-/**
- * 
- */
 package com.teradata.nifi.processors.teradata;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.SQLTransientException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.dbcp.DBCPService;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.logging.ComponentLog;
-import org.apache.nifi.processor.AbstractProcessor;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessorInitializationContext;
-import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
+
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.SQLTransientException;
+import java.util.*;
 
 /**
  * Common Processor behavior for all putJdbcHighSpeed Processors
@@ -185,7 +172,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
 
     @Override
     public List<PropertyDescriptor> getSupportedPropertyDescriptors() {
-		return new ArrayList<PropertyDescriptor>(supportedPropertyDescriptors);
+		return new ArrayList<>(supportedPropertyDescriptors);
     }
     
     protected void onScheduled(final ProcessContext context) {
