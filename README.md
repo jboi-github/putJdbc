@@ -2,8 +2,8 @@
 NIFI Processor for bulk loading data into a database. It takes a FlowFile, then initializes a sequence to load and transform the data using the best practice approach for very large databases.
 
 The processor comes in two flavours:
-- putJdbcFlex allows a parameterized insert statement to load into database. The input can be any record oriented data, that a RecordReader can parse.
-- putJdbcCsv is especially designed to load extreme amounts of data into Teradata using the Fastload-CSV feature of Teradata's Jdbc driver.
+- **putJdbcFlex** allows a parameterized insert statement to load into database. The input can be any record oriented data, that a RecordReader can parse.
+- **putJdbcCsv** is especially designed to load extreme amounts of data into Teradata using the Fastload-CSV feature of Teradata's Jdbc driver.
 
 For more details see the usage page of these processors in Nifi.
 
