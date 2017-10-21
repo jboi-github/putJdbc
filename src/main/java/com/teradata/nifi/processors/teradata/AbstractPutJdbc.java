@@ -211,7 +211,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
 		{
  	 		getLogger().info("Connected");
 			for(FlowFile flowFile = session.get(); flowFile != null; flowFile = session.get()) {
-				getLogger().debug("Processing FlowFile: " + flowFile.getSize()/(1024.0 * 1024.0) + "MB");
+				getLogger().debug("Processing FlowFile: {}MB", new Object[] {flowFile.getSize() / (1024.0 * 1024.0)});
 	 	 		processor.process(flowFile);
 				getLogger().debug("Processed.");
 	 	 		
@@ -237,7 +237,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
     private void react(Throwable t, ProcessContext context) throws ProcessException {
     		boolean shouldYield = true;
     		
-    		// Walk thru chain of exceptions
+    		// Walk through chain of exceptions
     		for(Throwable e = t; e != null; e = e.getCause()) {
 			// What are the detailed errors on SQL?
 			if(e instanceof SQLException)
@@ -257,7 +257,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
     
     private PropertyValue charConversion(PropertyValue propertyValue) throws UnsupportedEncodingException {
 		String property = new String(propertyValue.getValue().getBytes(Charset.forName(charsetName.getValue())), charsetName.getValue());
-		getLogger().info("Effectively used as: \"" + property + "\" coming from: \"" + propertyValue.getValue() + "\"");
+		getLogger().info("Effectively used as: \"{}\" coming from: \"{}\"", new Object[] {property, propertyValue.getValue()});
 		
 		return propertyValue;
     }
