@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.teradata.nifi.processors.teradata;
 
 import java.io.ByteArrayInputStream;
@@ -36,7 +33,7 @@ public abstract class AbstractBaseProcessor implements BaseProcessor {
 	
 	private AdditionalAttributes atts;
 
-	public AbstractBaseProcessor(
+	AbstractBaseProcessor(
 			ProcessSession session,
 			Relationship success, Relationship failure, Relationship script,
 			Connection scriptConnection, Connection loadConnection,
@@ -85,7 +82,7 @@ public abstract class AbstractBaseProcessor implements BaseProcessor {
 				atts.evaluate(eltScript, flowFile), atts.evaluate(afterScript, flowFile),
 				logger)) {
 			
-			result.put("before", decorate(() -> jdbcWriter.runBeforeScript()));
+			result.put("before", decorate(jdbcWriter::runBeforeScript));
 			try (InputStream in = session.read(flowFile)) {
 				long loadStart = System.currentTimeMillis();
 				int loadRows = load(in, flowFile, jdbcWriter, logger);
@@ -99,8 +96,8 @@ public abstract class AbstractBaseProcessor implements BaseProcessor {
 				load.put("rows", loadRows);
 				result.put("load", load);
 			}
-			result.put("ELT", decorate(() -> jdbcWriter.runEltScript()));
-			result.put("after", decorate(() -> jdbcWriter.runAfterScript()));
+			result.put("ELT", decorate(jdbcWriter::runEltScript));
+			result.put("after", decorate(jdbcWriter::runAfterScript));
 
 			successfully = true;
 		} finally {
@@ -122,7 +119,7 @@ public abstract class AbstractBaseProcessor implements BaseProcessor {
     
 	@FunctionalInterface
 	private interface ScriptRunner {
-		public JSONArray run() throws SQLException; 
+		JSONArray run() throws SQLException;
 	}
 	
 	private JSONObject decorate(ScriptRunner scriptRunner) throws JSONException, SQLException {

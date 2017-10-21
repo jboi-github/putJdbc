@@ -36,7 +36,7 @@ import org.apache.nifi.processor.util.StandardValidators;
  *
  */
 public abstract class AbstractPutJdbc extends AbstractProcessor {
-    protected static final PropertyDescriptor CONNECTION_POOL_SCRIPT = new PropertyDescriptor.Builder()
+    private static final PropertyDescriptor CONNECTION_POOL_SCRIPT = new PropertyDescriptor.Builder()
             .name("JDBC Connection Pool for Before-, ELT- and After Script")
             .description("Specifies the JDBC Connection Pool to use in order to run Before-, ELT- and After-Scripts. "
             		+ "This connection must be set up for SQL script execution. The processor will use one connection per "
@@ -45,7 +45,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .required(true)
             .build();
 
-    protected static final PropertyDescriptor CONNECTION_POOL_LOAD = new PropertyDescriptor.Builder()
+    private static final PropertyDescriptor CONNECTION_POOL_LOAD = new PropertyDescriptor.Builder()
             .name("JDBC Connection Pool for high speed loading")
             .description("Specifies the JDBC Connection Pool to use in order to load into landing table. "
             		+ "This connection must be set up for high speed data loading, most likely with parameter TYPE=FASTLOAD "
@@ -54,7 +54,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .required(true)
             .build();
 
-    protected static final PropertyDescriptor BEFORE_SCRIPT = new PropertyDescriptor.Builder()
+    private static final PropertyDescriptor BEFORE_SCRIPT = new PropertyDescriptor.Builder()
             .name("Before Script")
             .displayName("Before Script for Landing Table")
             .description("SQL Script to run before loading to landing table starts. "
@@ -68,7 +68,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .expressionLanguageSupported(true)
             .build();
 
-    protected static final PropertyDescriptor ELT_SCRIPT = new PropertyDescriptor.Builder()
+    private static final PropertyDescriptor ELT_SCRIPT = new PropertyDescriptor.Builder()
             .name("ELT Script")
             .displayName("ELT Script for Landing Table")
             .description("SQL Script to run right after loading to landing table did commit. "
@@ -84,7 +84,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .expressionLanguageSupported(true)
             .build();
 
-    protected static final PropertyDescriptor AFTER_SCRIPT = new PropertyDescriptor.Builder()
+    private static final PropertyDescriptor AFTER_SCRIPT = new PropertyDescriptor.Builder()
             .name("After Script")
             .displayName("After Script for Landing Table")
             .description("SQL Script to run after loading to landing table and the processor did finish. "
@@ -98,7 +98,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .expressionLanguageSupported(true)
             .build();
 
-    protected static final PropertyDescriptor PREPARED_STATEMENT = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor PREPARED_STATEMENT = new PropertyDescriptor.Builder()
             .name("Prepared Statement")
             .displayName("Prepared Statement for loading into Landing Table")
             .description("Insert statement to load into table. It contains ? to bind fields, parsed out of FlowFile content. "
@@ -114,7 +114,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .expressionLanguageSupported(true)
             .build();
 
-    protected static final PropertyDescriptor CHARSET = new PropertyDescriptor.Builder()
+    private static final PropertyDescriptor CHARSET = new PropertyDescriptor.Builder()
             .name("Character set for SQL")
             .displayName("Character set to use for SQL commands")
             .description("Some databases do not support full UTF-8 character sets. In this "
@@ -127,7 +127,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
 			.required(false)
             .build();
 
-    protected static final Relationship SUCCESS = new Relationship.Builder()
+    static final Relationship SUCCESS = new Relationship.Builder()
             .name("success")
             .description("All succesfully executed data is passed to this relationship. "
             		+ "This processor always syncs commits and roll backs between the database and the Nifi session. "
@@ -137,7 +137,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .autoTerminateDefault(true)
             .build();
 
-    protected static final Relationship FAILURE = new Relationship.Builder()
+    static final Relationship FAILURE = new Relationship.Builder()
             .name("failure")
             .description("All unsuccesfully parsed data is passed to this relationship. "
             		+ "This processor always syncs commits and roll backs between the database and the Nifi session. "
@@ -146,7 +146,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .autoTerminateDefault(false)
             .build();
 
-    protected static final Relationship SCRIPT = new Relationship.Builder()
+    static final Relationship SCRIPT = new Relationship.Builder()
             .name("script")
             .description("Results from scripts can be one or more result sets "
             		+ "and update counts. All of them are packed in a json document "
@@ -161,7 +161,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
      * @author juergenb
      */
     public interface BaseProcessor extends AutoCloseable {
-    		public void process(FlowFile flowFile) throws Exception;
+    		void process(FlowFile flowFile) throws Exception;
     }
     
     private List<PropertyDescriptor> supportedPropertyDescriptors;
@@ -175,10 +175,9 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
 		getLogger().debug("init!");
 		
         supportedPropertyDescriptors = new ArrayList<>();
-        supportedPropertyDescriptors.addAll(Arrays.asList(new PropertyDescriptor[] {
-        		CONNECTION_POOL_SCRIPT, CONNECTION_POOL_LOAD,
-            	PREPARED_STATEMENT, BEFORE_SCRIPT, ELT_SCRIPT, AFTER_SCRIPT, CHARSET}));
-        this.relationships = Collections.unmodifiableSet(new HashSet<Relationship>(Arrays.asList(SUCCESS, FAILURE, SCRIPT)));
+        supportedPropertyDescriptors.addAll(Arrays.asList(CONNECTION_POOL_SCRIPT, CONNECTION_POOL_LOAD,
+                PREPARED_STATEMENT, BEFORE_SCRIPT, ELT_SCRIPT, AFTER_SCRIPT, CHARSET));
+        this.relationships = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(SUCCESS, FAILURE, SCRIPT)));
     }
 
     @Override
@@ -186,15 +185,10 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
 
     @Override
     public List<PropertyDescriptor> getSupportedPropertyDescriptors() {
-		List<PropertyDescriptor> list = new ArrayList<PropertyDescriptor>(supportedPropertyDescriptors);
-		return list;
+		return new ArrayList<PropertyDescriptor>(supportedPropertyDescriptors);
     }
     
-    /**
-     * @param context
-     * @throws IOException
-     */
-    public void onScheduled(final ProcessContext context) {
+    protected void onScheduled(final ProcessContext context) {
        	// Get static properties
 		beforeScript = context.getProperty(BEFORE_SCRIPT);
 		eltScript = context.getProperty(ELT_SCRIPT);

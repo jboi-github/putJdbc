@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.teradata.nifi.processors.teradata;
 
 import java.io.IOException;
@@ -39,7 +36,7 @@ public class FlexProcessor extends AbstractBaseProcessor {
 	private RecordReaderFactory recordReaderFactory;
 	private String[] fieldNames;
 	
-	public FlexProcessor(
+	FlexProcessor(
 			ProcessSession session,
 			Relationship success, Relationship failure, Relationship script,
 			Connection scriptConnection, Connection loadConnection,
@@ -75,9 +72,7 @@ public class FlexProcessor extends AbstractBaseProcessor {
 	
 	private Object[] parse(Record record) {
 		// Get fields from record
-		Object[] values = Arrays
-			.asList(fieldNames)
-			.stream()
+		return Arrays.stream(fieldNames)
 			.map(fieldName -> {
 				try {
 					RecordFieldType recordFieldType = record
@@ -93,22 +88,21 @@ public class FlexProcessor extends AbstractBaseProcessor {
 			})
 			.collect(Collectors.toList())
 			.toArray();
-		return values;
 	}
 
 	@FunctionalInterface
 	private interface JdbcCaster {
-		public Object cast(Record record, String fieldName);
+		Object cast(Record record, String fieldName);
 	}
 	
 	private static final Map<RecordFieldType, JdbcCaster> jdbcCaster = new HashMap<RecordFieldType, JdbcCaster>() {
 		private static final long serialVersionUID = -6419909004656722805L;
 
 		{
-			put(RecordFieldType.STRING, (record, fieldName) -> record.getAsString(fieldName));
-			put(RecordFieldType.DOUBLE, (record, fieldName) -> record.getAsDouble(fieldName));
-			put(RecordFieldType.INT, (record, fieldName) -> record.getAsInt(fieldName));
-			put(RecordFieldType.LONG, (record, fieldName) -> record.getAsLong(fieldName));
+			put(RecordFieldType.STRING, Record::getAsString);
+			put(RecordFieldType.DOUBLE, Record::getAsDouble);
+			put(RecordFieldType.INT, Record::getAsInt);
+			put(RecordFieldType.LONG, Record::getAsLong);
 			put(RecordFieldType.TIMESTAMP, (record, fieldName) -> new Timestamp(record.getAsLong(fieldName)));
 			put(RecordFieldType.DATE, (record, fieldName) -> {
 				try {

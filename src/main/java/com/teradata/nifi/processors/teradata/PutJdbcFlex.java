@@ -16,14 +16,6 @@
  */
 package com.teradata.nifi.processors.teradata;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
@@ -44,6 +36,13 @@ import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.serialization.RecordReaderFactory;
 import org.apache.nifi.serialization.RecordSetWriterFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A Nifi Processor to load into Teradata via JDBC in the fastest possible (probably at fastload-speed) way.
@@ -99,12 +98,11 @@ public class PutJdbcFlex extends AbstractPutJdbc {
     private Map<String, PropertyDescriptor> supportedDynamicPropertyDescriptors;
     
     private String[] fieldNames; // Parameter
-    private int nofColumns; // Parameter
 
-    @Override
+	@Override
     protected void init(final ProcessorInitializationContext context) {
-    		super.init(context);
-        this.supportedDynamicPropertyDescriptors = new HashMap<String, PropertyDescriptor>(); // Empty and modifiable
+		super.init(context);
+        this.supportedDynamicPropertyDescriptors = new HashMap<>(); // Empty and modifiable
     }
 
     @Override
@@ -127,7 +125,7 @@ public class PutJdbcFlex extends AbstractPutJdbc {
 	public void onPropertyModified(PropertyDescriptor descriptor, String oldValue, String newValue) {
 		if(PREPARED_STATEMENT.equals(descriptor)) {
 			long countQuestionMarks = newValue.chars().filter(c -> c == '?').count();
-			Map<String, PropertyDescriptor> supportedDynamicPropertyDescriptors = new HashMap<String, PropertyDescriptor>();
+			Map<String, PropertyDescriptor> supportedDynamicPropertyDescriptors = new HashMap<>();
 			
 			for(int i = 1; i <= countQuestionMarks; i++) {
 				String name = "record-field-name." + i;
@@ -160,8 +158,7 @@ public class PutJdbcFlex extends AbstractPutJdbc {
      * to be terminated, connections themselves are not created at this point. Rather, the connections are created
      * or leased from the pool in the onTrigger method.
      * 
-     * @param context
-	 * @throws IOException 
+     * @param context this processor will work in.
      */
     @OnScheduled
     public void onScheduled(final ProcessContext context) {
@@ -170,7 +167,7 @@ public class PutJdbcFlex extends AbstractPutJdbc {
 		super.onScheduled(context);
 
        	// Get static properties
-		nofColumns = (int) context.getProperty(PREPARED_STATEMENT).getValue().chars().filter(c -> c == '?').count();
+		int nofColumns = (int) context.getProperty(PREPARED_STATEMENT).getValue().chars().filter(c -> c == '?').count();
 		
 		// Get field names out of properties
 		fieldNames = new String[nofColumns];

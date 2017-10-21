@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.teradata.nifi.processors.teradata;
 
 import java.sql.Connection;
@@ -52,12 +49,11 @@ import org.apache.nifi.processor.Relationship;
 @InputRequirement(Requirement.INPUT_REQUIRED)
 @SeeAlso({DBCPService.class})
 
-/**
- * @author juergenb
- *
- */
 public class PutJdbcCsv extends AbstractPutJdbc {
-    @OnScheduled
+	/**
+	 * @param context that onScheduled is called from
+	 */
+	@OnScheduled
     public void onScheduled(final ProcessContext context) {
 		getLogger().info("Correct version? 2017-10-20 15:41 CSV");
 		super.onScheduled(context);

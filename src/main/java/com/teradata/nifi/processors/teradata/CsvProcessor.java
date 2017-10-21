@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.teradata.nifi.processors.teradata;
 
 import java.io.InputStream;
@@ -22,7 +19,7 @@ import org.apache.nifi.processor.Relationship;
  *
  */
 public class CsvProcessor extends AbstractBaseProcessor {
-	public CsvProcessor(
+	CsvProcessor(
 			ProcessSession session,
 			Relationship success, Relationship failure, Relationship script,
 			Connection scriptConnection, Connection loadConnection,

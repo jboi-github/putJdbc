@@ -1,22 +1,11 @@
-/**
- * 
- */
 package com.teradata.nifi.processors.teradata;
 
-import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.ParameterMetaData;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.SQLWarning;
-import java.sql.Statement;
-
 import org.apache.nifi.logging.ComponentLog;
-import org.apache.nifi.serialization.record.Record;
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.io.InputStream;
+import java.sql.*;
 
 /**
  * Wrap JDBC commands, used by the processor.
@@ -34,11 +23,6 @@ import org.json.JSONObject;
  * @author juergenb
  */
 class JdbcWriter implements AutoCloseable {
-	public interface JdbcBinder {
-		void bind(PreparedStatement preparedStatement, int parameterIndex, Record record, String fieldName) throws SQLException, NumberFormatException;
-		int getSqlType();
-	}
-
 	private String beforeScript, afterScript, eltScript, insertStatement;
 	private Connection scriptConnection, loadConnection;
 	private PreparedStatement preparedStatement = null;
@@ -56,9 +40,8 @@ class JdbcWriter implements AutoCloseable {
 	 * 	Most likely a delete all or create table statement to ensure an empty table for fastload.
 	 * @param afterScript: To run after given number of rows loaded into table or a specified time elapsed.
 	 * 	Most likely some SQL statement to run ELT on the loaded data.
-	 * @throws SQLException 
 	 */
-	public JdbcWriter(
+	JdbcWriter(
 			Connection scriptConnection, Connection loadConnection,
 			String beforeScript, String insertStatement, String eltScript, String afterScript,
 			ComponentLog logger) throws SQLException {
@@ -83,11 +66,11 @@ class JdbcWriter implements AutoCloseable {
 		logWarnings(loadConnection);
 	}
 	
-	public JSONArray runBeforeScript() throws SQLException {return runScript(beforeScript);}
-	public JSONArray runEltScript() throws SQLException {return runScript(eltScript);}
-	public JSONArray runAfterScript() throws SQLException {return runScript(afterScript);}
+	JSONArray runBeforeScript() throws SQLException {return runScript(beforeScript);}
+	JSONArray runEltScript() throws SQLException {return runScript(eltScript);}
+	JSONArray runAfterScript() throws SQLException {return runScript(afterScript);}
 
-	public void addRow(Object[] values) throws SQLException {
+	void addRow(Object[] values) throws SQLException {
 		// Prepare statement as late as possible to avoid locks on table when before script is running.
 		prepare(loadConnection, insertStatement);
 		
@@ -99,10 +82,8 @@ class JdbcWriter implements AutoCloseable {
 		for(int i=0; i<preparedColumns.length; i++) preparedColumns[i].bind(preparedStatement, i+1, values[i]);
 		rowEnd(preparedStatement);
 	}
-	
-	public void transferBatch() throws SQLException {transferBatch(preparedStatement);}
-	
-	public int transferCsv(InputStream in) throws SQLException {
+
+	int transferCsv(InputStream in) throws SQLException {
 		try (PreparedStatement preparedStatement = loadConnection.prepareStatement(insertStatement)) {
 			logWarnings(preparedStatement);
 			
@@ -116,14 +97,12 @@ class JdbcWriter implements AutoCloseable {
 		}
 	}
 	
-	public void commit() throws SQLException {commit(loadConnection);}
+	void commit() throws SQLException {commit(loadConnection);}
 
 	@Override
 	public void close() {}
-	
-	public String getURL() throws SQLException {return loadConnection.getMetaData().getURL();}
-	
-	public void resetSQL(String beforeScript, String insertStatement, String eltScript, String afterScript) throws SQLException {
+
+	private void resetSQL(String beforeScript, String insertStatement, String eltScript, String afterScript) throws SQLException {
 		this.beforeScript = beforeScript;
 		this.eltScript = eltScript;
 		this.afterScript = afterScript;
@@ -142,30 +121,17 @@ class JdbcWriter implements AutoCloseable {
 		preparedStatement.addBatch();
 		logWarnings(preparedStatement);
 	}
-	
-	/**
-	 * @param preparedStatement with existing batch to be transfered.
-	 * @return Number of rows inserted over all batches or a negative number indicating error (ERROR_FAILURE) or unknown result (SUCCESS_UNKNOWN).
-	 * @throws SQLException 
-	 */
-	private void transferBatch(PreparedStatement preparedStatement) throws SQLException {
-		preparedStatement.executeBatch();
-		logWarnings(preparedStatement);
-		
-		preparedStatement.clearBatch();
-		logWarnings(preparedStatement);
-	}
-	
+
 	/**
 	 * @param connection to be committed.
-	 * @throws SQLException
+	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
 	private void commit(Connection connection) throws SQLException {connection.commit();}
 	
 	/**
 	 * @param script with SQL statements to run against open scriptConnection.
 	 * @return ResulSets, update counts and ... as JSON document.
-	 * @throws SQLException 
+	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
 	private JSONArray runScript(String script) throws SQLException {
 		JSONArray json = new JSONArray();
@@ -210,7 +176,7 @@ class JdbcWriter implements AutoCloseable {
 	
 	/**
 	 * @param connection to print warnings for.
-	 * @throws SQLException
+	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
 	private void logWarnings(Connection connection) throws SQLException {
 		logWarnings(connection.getWarnings());
@@ -219,7 +185,7 @@ class JdbcWriter implements AutoCloseable {
 	
 	/**
 	 * @param statement to print warnings for.
-	 * @throws SQLException
+	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
 	private void logWarnings(Statement statement) throws SQLException {
 		logWarnings(statement.getWarnings());
@@ -228,7 +194,7 @@ class JdbcWriter implements AutoCloseable {
 	
 	/**
 	 * @param resultSet to print warnings for.
-	 * @throws SQLException
+	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
 	private void logWarnings(ResultSet resultSet) throws SQLException {
 		logWarnings(resultSet.getWarnings());
@@ -237,7 +203,7 @@ class JdbcWriter implements AutoCloseable {
 	
 	/**
 	 * @param warning as starting point to print chain of warnings.
-	 * @throws SQLException
+	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
 	private void logWarnings(SQLWarning warning) throws SQLException {
 		for(; warning != null; warning = warning.getNextWarning()) {
@@ -263,13 +229,13 @@ class JdbcWriter implements AutoCloseable {
 		private int targetSqlType;
 		private int scaleOrLength;
 		
-		public Column(ParameterMetaData parameterMetaData, int parameterIndex) throws SQLException  {
+		Column(ParameterMetaData parameterMetaData, int parameterIndex) throws SQLException  {
 			this.targetSqlType = parameterMetaData.getParameterType(parameterIndex);
 			if((this.scaleOrLength = parameterMetaData.getScale(parameterIndex)) == 0)
 				this.scaleOrLength = parameterMetaData.getPrecision(parameterIndex);
 		}
 		
-		public void bind(PreparedStatement preparedStatement, int parameterIndex, Object value) throws SQLException {
+		void bind(PreparedStatement preparedStatement, int parameterIndex, Object value) throws SQLException {
 			preparedStatement.setObject(parameterIndex, value, targetSqlType, scaleOrLength);
 		}
 	}

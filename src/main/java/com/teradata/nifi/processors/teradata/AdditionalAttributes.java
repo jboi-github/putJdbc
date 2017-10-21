@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.teradata.nifi.processors.teradata;
 
 import java.net.InetAddress;
@@ -17,13 +14,13 @@ import org.apache.nifi.logging.ComponentLog;
  * @author juergenb
  *
  */
-public class AdditionalAttributes {
+class AdditionalAttributes {
 	private ComponentLog logger;
 	private Random random;
 	private String tableId;
 	private int commitEpoch, tableIdLength;
 	
-	public AdditionalAttributes(ComponentLog logger, int tableIdLength) {
+	AdditionalAttributes(ComponentLog logger, int tableIdLength) {
 		this.logger = logger;
 		this.tableIdLength = tableIdLength;
 		
@@ -33,9 +30,7 @@ public class AdditionalAttributes {
        	logger.info("set TABLE_ID to " + tableId + ", COMMIT_EPOCH = " + commitEpoch);
 	}
     
-    public String evaluate(PropertyValue propertyValue) {return evaluate(propertyValue, null);}
-    
-    public String evaluate(PropertyValue propertyValue, FlowFile flowFile) {
+    String evaluate(PropertyValue propertyValue, FlowFile flowFile) {
     		String property = (flowFile == null)? 
     				propertyValue.getValue():
     				propertyValue.evaluateAttributeExpressions(flowFile).getValue();
@@ -64,7 +59,7 @@ public class AdditionalAttributes {
 			'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 
 			'u', 'v', 'w', 'x', 'y', 'z'};
 
-    public void generateShortUUID() {
+    private void generateShortUUID() {
     		StringBuilder sb = new StringBuilder(tableIdLength);
    		for(int i = 0; i < tableIdLength; i++) sb.append(ALPHABET[random.nextInt(ALPHABET.length)]);
    		tableId = sb.toString();
@@ -72,13 +67,8 @@ public class AdditionalAttributes {
        	logger.info("set TABLE_ID to " + tableId + ", COMMIT_EPOCH = " + commitEpoch);
 	}
 
-    public void incEpoch() {commitEpoch++;}
-    
-    public long addJitter(long value, double jitter) {
-    		long range = (long) (value * jitter * (2.0 * random.nextDouble() - 1.0) + 0.5);
-    		return value + range;
-    }
+    void incEpoch() {commitEpoch++;}
 
-	public String getTableId() {return tableId;}
-	public int getCommitEpoch() {return commitEpoch;}
+    String getTableId() {return tableId;}
+	int getCommitEpoch() {return commitEpoch;}
 }
