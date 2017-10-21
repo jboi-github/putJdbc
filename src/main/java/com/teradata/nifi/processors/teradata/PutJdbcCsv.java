@@ -29,7 +29,7 @@ import org.apache.nifi.processor.Relationship;
 		+ "processor if it was not a transient error. The processor works only, if the before script ensures an empty and exclusive "
 		+ "table to load the data. The data must be CSV data in one FlowFile per load. Ensure that, the Connection-URL states the "
 		+ "correct type=FASTLOADCSV, Field-separator, character set etc. ALso ensure, that this parameter match to the CSV data in the FLowFile. "
-		+ "A common usage pattern is, that a ConvertRecord parses incomming data into CSV-Files and MergeContent put together a larger Flowfile "
+		+ "A common usage pattern is, that a ConvertRecord parses incoming data into CSV-Files and MergeContent put together a larger Flowfile "
 		+ "for efficient Fastload-Loading. "
 		+ "Thus, together with the commit and roll back for a session in Nifi ensures, that Flow Files "
 		+ "are always loaded once and only once into the database.")
@@ -40,7 +40,7 @@ import org.apache.nifi.processor.Relationship;
 				+ "lowercase letters (a-z). This attribute can be used to construct a table "
 				+ "name which will be unique in the far most cases."),
 	@WritesAttribute(
-			attribute = "COMMIT_EPOCHE",
+			attribute = "COMMIT_EPOCH",
 			description = "An integer counting how often this task locally ran thru the commit sequence. "
 					+ "The number can be loaded into the load table and helpd to identify in the ELT which "
 					+ "rows where loaded in latest batch.")
