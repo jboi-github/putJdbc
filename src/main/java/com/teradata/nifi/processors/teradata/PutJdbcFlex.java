@@ -71,7 +71,7 @@ import java.util.Map;
 				+ "lowercase letters (a-z). This attribute can be used to construct a table "
 				+ "name which will be unique in the far most cases."),
 	@WritesAttribute(
-			attribute = "COMMIT_EPOCHE",
+			attribute = "COMMIT_EPOCH",
 			description = "An integer counting how often this task locally ran thru the commit sequence. "
 					+ "The number can be loaded into the load table and helpd to identify in the ELT which "
 					+ "rows where loaded in latest batch.")
@@ -107,7 +107,8 @@ public class PutJdbcFlex extends AbstractPutJdbc {
 
     @Override
     public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
-    		List<PropertyDescriptor> list = super.getSupportedPropertyDescriptors();
+		List<PropertyDescriptor> list = super.getSupportedPropertyDescriptors();
+		list.add(RECORD_READER_FACTORY);
 		list.addAll(supportedDynamicPropertyDescriptors.values());
 		return list;
     }
