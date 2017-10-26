@@ -87,15 +87,26 @@ import java.util.Map;
 				+ "Integer, Double, String, Date, Time and Timestamp (with Milliseconds granularity).")
 @SeeAlso({DBCPService.class, RecordReaderFactory.class, RecordSetWriterFactory.class})
 public class PutJdbcFlex extends AbstractPutJdbc {
-    private static final PropertyDescriptor RECORD_READER_FACTORY = new PropertyDescriptor.Builder()
-            .name("Record Reader")
-            .displayName("Record Reader defining input schema")
-            .description("Specifies the Controller Service to use for parsing incoming data and determining the data's schema.")
-            .identifiesControllerService(RecordReaderFactory.class)
-            .required(true)
-            .build();
+	private static final PropertyDescriptor RECORD_READER_FACTORY = new PropertyDescriptor.Builder()
+			.name("Record Reader")
+			.displayName("Record Reader defining input schema")
+			.description("Specifies the Controller Service to use for parsing incoming data and determining the data's schema.")
+			.identifiesControllerService(RecordReaderFactory.class)
+			.required(true)
+			.build();
 
-    private Map<String, PropertyDescriptor> supportedDynamicPropertyDescriptors;
+	private static final PropertyDescriptor SEND_INDIVIDUALLY = new PropertyDescriptor.Builder()
+			.name("Send rows individually")
+			.displayName("Send rows one by one individually")
+			.description("Some databases like sqlite do not allow to send batches of insert statmennts in one block. " +
+					"In this case, set this parameter to true.")
+			.defaultValue("false")
+			.allowableValues("true", "false")
+			.addValidator(StandardValidators.BOOLEAN_VALIDATOR)
+			.required(false)
+			.build();
+
+	private Map<String, PropertyDescriptor> supportedDynamicPropertyDescriptors;
     
     private String[] fieldNames; // Parameter
 
@@ -109,6 +120,7 @@ public class PutJdbcFlex extends AbstractPutJdbc {
     public final List<PropertyDescriptor> getSupportedPropertyDescriptors() {
 		List<PropertyDescriptor> list = super.getSupportedPropertyDescriptors();
 		list.add(RECORD_READER_FACTORY);
+		list.add(SEND_INDIVIDUALLY);
 		list.addAll(supportedDynamicPropertyDescriptors.values());
 		return list;
     }
@@ -187,11 +199,12 @@ public class PutJdbcFlex extends AbstractPutJdbc {
 		
        	// Initialize Record Reader and Writer Factory
 		RecordReaderFactory recordReaderFactory = context.getProperty(RECORD_READER_FACTORY).asControllerService(RecordReaderFactory.class);
-		
+		boolean sendIndividually = context.getProperty(SEND_INDIVIDUALLY).asBoolean();
+
 		return new FlexProcessor(
 				session, SUCCESS, FAILURE, SCRIPT,
 				scriptConnection, loadConnection,
 				beforeScript, preparedStatement, eltScript, afterScript,
-				recordReaderFactory, fieldNames, getLogger());
+				recordReaderFactory, sendIndividually, fieldNames, getLogger());
 	}
 }

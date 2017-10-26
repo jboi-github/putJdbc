@@ -35,17 +35,21 @@ import org.apache.nifi.serialization.record.util.IllegalTypeConversionException;
 public class FlexProcessor extends AbstractBaseProcessor {
 	private RecordReaderFactory recordReaderFactory;
 	private String[] fieldNames;
+	private boolean sendIndividually;
 	
 	FlexProcessor(
 			ProcessSession session,
 			Relationship success, Relationship failure, Relationship script,
 			Connection scriptConnection, Connection loadConnection,
 			PropertyValue beforeScript, PropertyValue insertStatement, PropertyValue eltScript, PropertyValue afterScript,
-			RecordReaderFactory recordReaderFactory, String[] fieldNames, ComponentLog logger) throws SQLException
+			RecordReaderFactory recordReaderFactory, boolean sendIndividually, String[] fieldNames,
+			ComponentLog logger) throws SQLException
 	{
 		super(session, success, failure, script, scriptConnection, loadConnection,
 				beforeScript, insertStatement, eltScript, afterScript, logger);
+
 		this.recordReaderFactory = recordReaderFactory;
+		this.sendIndividually = sendIndividually;
 		this.fieldNames = fieldNames;
 	}
 
@@ -61,7 +65,9 @@ public class FlexProcessor extends AbstractBaseProcessor {
 			for(Record record = recordReader.nextRecord(); record != null; record = recordReader.nextRecord()) {
 				i++;
 				jdbcWriter.addRow(parse(record));
+				if(sendIndividually) jdbcWriter.transferBatch();
 			}
+			if(i > 0 && !sendIndividually) jdbcWriter.transferBatch();
 		} catch (MalformedRecordException e) {
 			logger.warn(
 					e.getMessage() + ((i == 0)? " -> FlowFile ignored: " : " -> Records starting at " + i + " ignored in FlowFile: ") +  
@@ -80,8 +86,8 @@ public class FlexProcessor extends AbstractBaseProcessor {
 							.getDataType(fieldName)
 							.orElseThrow(() -> new SchemaNotFoundException("Field \"" + fieldName + "\" not found in schema"))
 							.getFieldType();
-						JdbcCaster caster = jdbcCaster.get(recordFieldType);
-						return (caster == null)? null : caster.cast(record, fieldName);
+					JdbcCaster caster = jdbcCaster.get(recordFieldType);
+					return (caster == null)? null : caster.cast(record, fieldName);
 				} catch(SchemaNotFoundException e) {
 					throw new RuntimeException(e);
 				}

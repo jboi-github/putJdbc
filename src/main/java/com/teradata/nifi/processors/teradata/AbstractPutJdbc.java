@@ -36,9 +36,10 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
             .name("JDBC Connection Pool for high speed loading")
             .description("Specifies the JDBC Connection Pool to use in order to load into landing table. "
             		+ "This connection must be set up for high speed data loading, most likely with parameter TYPE=FASTLOAD "
-            		+ "set in the URL. The processor will use one connection per task out of this pool.")
+            		+ "set in the URL. The processor will use one connection per task out of this pool. If " +
+					"this is empty, the connection for scripts is used for loading.")
             .identifiesControllerService(DBCPService.class)
-            .required(true)
+            .required(false)
             .build();
 
     private static final PropertyDescriptor BEFORE_SCRIPT = new PropertyDescriptor.Builder()
@@ -198,11 +199,12 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
  		getLogger().info("Started: " + session.getQueueSize());
  		
  		DBCPService dbcpServiceScript = context.getProperty(CONNECTION_POOL_SCRIPT).asControllerService(DBCPService.class);
-		DBCPService dbcpServiceLoad = context.getProperty(CONNECTION_POOL_LOAD).asControllerService(DBCPService.class);
+ 		PropertyValue loadProperty = context.getProperty(CONNECTION_POOL_LOAD);
+		DBCPService dbcpServiceLoad = (loadProperty == null)? null:loadProperty.asControllerService(DBCPService.class);
 		
 		// Parser with JdbcWriter is AutoClosable. When it closes it automatically rolls back everything, that was not explicitly committed
 		try (	Connection scriptConnection =  dbcpServiceScript.getConnection();
-				Connection loadConnection =  dbcpServiceLoad.getConnection();
+				Connection loadConnection =  (dbcpServiceLoad == null)? scriptConnection:dbcpServiceLoad.getConnection();
 				BaseProcessor processor = createProcessor(
 						context, session, SUCCESS, FAILURE, SCRIPT,
 						scriptConnection, loadConnection,
