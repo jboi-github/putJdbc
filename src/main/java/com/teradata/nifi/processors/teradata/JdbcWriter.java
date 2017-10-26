@@ -96,7 +96,11 @@ class JdbcWriter implements AutoCloseable {
 			return updateCount;
 		}
 	}
-	
+
+	void transferBatch() throws SQLException {
+		if(preparedStatement != null && !preparedStatement.isClosed()) preparedStatement.executeBatch();
+	}
+
 	void commit() throws SQLException {commit(loadConnection);}
 
 	@Override

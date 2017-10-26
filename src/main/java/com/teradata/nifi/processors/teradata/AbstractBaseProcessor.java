@@ -29,7 +29,7 @@ public abstract class AbstractBaseProcessor implements BaseProcessor {
 	private Relationship success, failure, script;
 	private Connection scriptConnection, loadConnection;
 	private PropertyValue beforeScript, insertStatement, eltScript, afterScript;
-	private ComponentLog logger;	
+	private ComponentLog logger;
 	
 	private AdditionalAttributes atts;
 
