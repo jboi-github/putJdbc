@@ -70,16 +70,17 @@ public abstract class AbstractBaseProcessor implements BaseProcessor {
 		
 		JSONObject result = new JSONObject();
 		result.put("start", startTimestamp);
-		result.put("TABLE_ID", atts.getTableId());
-		result.put("COMMIT_EPOCH", atts.getCommitEpoch());
+		result.put("atts", atts.getAsJson());
 		result.put("node", InetAddress.getLocalHost());
 		result.put("threadId", Thread.currentThread().getId());
 		
 		boolean successfully = false;
 		try(JdbcWriter jdbcWriter = new JdbcWriter(
 				scriptConnection, loadConnection,
-				atts.evaluate(beforeScript, flowFile), atts.evaluate(insertStatement, flowFile),
-				atts.evaluate(eltScript, flowFile), atts.evaluate(afterScript, flowFile),
+				atts.evaluate(beforeScript.evaluateAttributeExpressions(flowFile).getValue()),
+				atts.evaluate(insertStatement.evaluateAttributeExpressions(flowFile).getValue()),
+				atts.evaluate(eltScript.evaluateAttributeExpressions(flowFile).getValue()),
+				atts.evaluate(afterScript.evaluateAttributeExpressions(flowFile).getValue()),
 				logger)) {
 			
 			result.put("before", decorate(jdbcWriter::runBeforeScript));
