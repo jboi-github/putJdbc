@@ -49,8 +49,8 @@ class JdbcWriter implements AutoCloseable {
 		this.logger = logger;
 
 		// Is connection OK?
-		logWarnings(scriptConnection);
-		logWarnings(loadConnection);
+		logWarnings(scriptConnection, logger);
+		logWarnings(loadConnection, logger);
 		
 		this.scriptConnection = scriptConnection;
 		this.loadConnection = loadConnection;
@@ -62,8 +62,8 @@ class JdbcWriter implements AutoCloseable {
 		// scriptConnection.setAutoCommit(false);
 		
 		// Is connection and statement OK?
-		logWarnings(scriptConnection);
-		logWarnings(loadConnection);
+		logWarnings(scriptConnection, logger);
+		logWarnings(loadConnection, logger);
 	}
 	
 	JSONArray runBeforeScript() throws SQLException {return runScript(beforeScript);}
@@ -85,13 +85,13 @@ class JdbcWriter implements AutoCloseable {
 
 	int transferCsv(InputStream in) throws SQLException {
 		try (PreparedStatement preparedStatement = loadConnection.prepareStatement(insertStatement)) {
-			logWarnings(preparedStatement);
+			logWarnings(preparedStatement, logger);
 			
 			preparedStatement.setAsciiStream(1, in, -1);
-			logWarnings(preparedStatement);
+			logWarnings(preparedStatement, logger);
 			
 			int updateCount = preparedStatement.executeUpdate();
-			logWarnings(preparedStatement);
+			logWarnings(preparedStatement, logger);
 			
 			return updateCount;
 		}
@@ -118,12 +118,12 @@ class JdbcWriter implements AutoCloseable {
 	
 	private void rowStart(PreparedStatement preparedStatement) throws SQLException {
 		preparedStatement.clearParameters();
-		logWarnings(preparedStatement);
+		logWarnings(preparedStatement, logger);
 	}
 	
 	private void rowEnd(PreparedStatement preparedStatement) throws SQLException {
 		preparedStatement.addBatch();
-		logWarnings(preparedStatement);
+		logWarnings(preparedStatement, logger);
 	}
 
 	/**
@@ -140,7 +140,7 @@ class JdbcWriter implements AutoCloseable {
 	private JSONArray runScript(String script) throws SQLException {
 		JSONArray json = new JSONArray();
 		if(script != null && !script.trim().isEmpty()) try (Statement statement = scriptConnection.createStatement()) {
-			logWarnings(statement);
+			logWarnings(statement, logger);
 			executeOneScript(script, statement, json);
 		}
 		if(!scriptConnection.getAutoCommit()) scriptConnection.commit();
@@ -150,11 +150,11 @@ class JdbcWriter implements AutoCloseable {
 	private void executeOneScript(String script, Statement statement, JSONArray json) throws SQLException {
 		for(boolean isRows = statement.execute(script); true; isRows = statement.getMoreResults()) {
 			JSONObject jsonOneResult = new JSONObject();
-			
+
 			if(isRows) {
 				JSONArray jsonRows = new JSONArray();
 				try (ResultSet resultSet = statement.getResultSet()) {
-					logWarnings(resultSet);
+					logWarnings(resultSet, logger);
 					
 					ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
 					
@@ -182,8 +182,8 @@ class JdbcWriter implements AutoCloseable {
 	 * @param connection to print warnings for.
 	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
-	private void logWarnings(Connection connection) throws SQLException {
-		logWarnings(connection.getWarnings());
+	static void logWarnings(Connection connection, ComponentLog logger) throws SQLException {
+		logWarnings(connection.getWarnings(), logger);
 		connection.clearWarnings();
 	}
 	
@@ -191,8 +191,8 @@ class JdbcWriter implements AutoCloseable {
 	 * @param statement to print warnings for.
 	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
-	private void logWarnings(Statement statement) throws SQLException {
-		logWarnings(statement.getWarnings());
+	static void logWarnings(Statement statement, ComponentLog logger) throws SQLException {
+		logWarnings(statement.getWarnings(), logger);
 		statement.clearWarnings();
 	}
 	
@@ -200,8 +200,8 @@ class JdbcWriter implements AutoCloseable {
 	 * @param resultSet to print warnings for.
 	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
-	private void logWarnings(ResultSet resultSet) throws SQLException {
-		logWarnings(resultSet.getWarnings());
+	static void logWarnings(ResultSet resultSet, ComponentLog logger) throws SQLException {
+		logWarnings(resultSet.getWarnings(), logger);
 		resultSet.clearWarnings();
 	}
 	
@@ -209,7 +209,7 @@ class JdbcWriter implements AutoCloseable {
 	 * @param warning as starting point to print chain of warnings.
 	 * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
 	 */
-	private void logWarnings(SQLWarning warning) throws SQLException {
+	private static void logWarnings(SQLWarning warning, ComponentLog logger) throws SQLException {
 		for(; warning != null; warning = warning.getNextWarning()) {
 			logger.warn(
 					warning.getMessage() + "(SQL State = " + warning.getSQLState() + "), (error code = " + warning.getErrorCode() + ")",

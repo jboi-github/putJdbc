@@ -201,7 +201,7 @@ public abstract class AbstractPutJdbc extends AbstractProcessor {
  		DBCPService dbcpServiceScript = context.getProperty(CONNECTION_POOL_SCRIPT).asControllerService(DBCPService.class);
  		PropertyValue loadProperty = context.getProperty(CONNECTION_POOL_LOAD);
 		DBCPService dbcpServiceLoad = (loadProperty == null)? null:loadProperty.asControllerService(DBCPService.class);
-		
+
 		// Parser with JdbcWriter is AutoClosable. When it closes it automatically rolls back everything, that was not explicitly committed
 		try (	Connection scriptConnection =  dbcpServiceScript.getConnection();
 				Connection loadConnection =  (dbcpServiceLoad == null)? scriptConnection:dbcpServiceLoad.getConnection();
