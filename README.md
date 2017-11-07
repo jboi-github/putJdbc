@@ -15,7 +15,7 @@ For more details see the usage page of these processors in Nifi.
     ```
 3. copy the NAR file to Nifi libs
     ```bash
-    cp ./nifi-teradata-nar/target/nifi-teradata-nar-3.0.nar ${NIFI_HOME}/lib/
+    cp ./nifi-teradata-nar/target/nifi-teradata-nar-4.0.nar ${NIFI_HOME}/lib/
     ```
     where ${NIFI_HOME} is the directory of your NIFI installation
 4. restart NIFI
