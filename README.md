@@ -61,8 +61,8 @@ Each loading works in one of three possible ways:
 
 #### `%TABLE_ID%` and `%COMMIT_EPOCH%`
    - All occurrences of this text in all scripts and the insert statement are replaced by:
-      - TABLE_ID is a 10 characters long random value consisting of the 10 digits and 26 lower case characters. It is build once when the processor starts and before it connects to the database. This number can have up to 3.6e15 different values and is built every time the processor starts a thread and kept as long as there’re Flowfiles in the queue. If you would connect every minute with 100 threads in parallel it would take about 58 Mio years to have a conflict on TABLE_ID with 50% probability. It’s seeded to the current time in nano seconds, a hash of the ip address and the current thread id. Therefore it's very likely, that each thread on each server in a NIFI cluster has a different seed, producing a different TABLE_ID. Even with the extremely rare cases of conflicting TABLE_ID’s it is good practise to have some code in the connected- or the before loading script to fail, if the TABLE_ID is already in use.
-      - COMMIT_EPOCH is a count of the number of loadings happened within the current connection. For the first loading, this number is 0, the second loading get 1 and so on. COMMIT_EPOCH is always 0 for the connect script and contains the number of successful loadings in the disconnecting script.
+      - `%TABLE_ID%` is a 10 characters long random value consisting of the 10 digits and 26 lower case characters. It is build once when the processor starts and before it connects to the database. This number can have up to 3.6e15 different values and is built every time the processor starts a thread and kept as long as there’re Flowfiles in the queue. If you would connect every minute with 100 threads in parallel it would take about 58 Mio years to have a conflict on `%TABLE_ID%` with 50% probability. It’s seeded to the current time in nano seconds, a hash of the ip address and the current thread id. Therefore it's very likely, that each thread on each server in a NIFI cluster has a different seed, producing a different `%TABLE_ID%`. Even with the extremely rare cases of conflicting `%TABLE_ID%`’s it is good practise to have some code in the connected- or the before loading script to fail, if the `%TABLE_ID%` is already in use.
+      - `%COMMIT_EPOCH%` is a count of the number of loadings happened within the current connection. For the first loading, this number is 0, the second loading get 1 and so on. `%COMMIT_EPOCH%` is always 0 for the connect script and contains the number of successful loadings in the disconnecting script.
       - Both values are available as text so they can be easily used as placeholders in an UpdateAttribute processor as described below. They’re also available as attributes in the FlowFile and set as attributes in the original FlowFile and the FlowFile transferred to the script relationship.
      
 #### **Teradata CSV**
@@ -87,13 +87,13 @@ Each loading works in one of three possible ways:
    - In this extra Connection Pool Service for the loading connection, limit the number of connections to 1 and set timeout as high as one loading might need to run. You might want to add some extra time to the timeout, just in case.
 
 #### Make sure FlowFiles contain a minimum number of rows as bulk loads usually profit from larger number of rows
-   - Place a MergeContent or MergeRecord (Version >= 1.4) processor before putJdbcBulk to merge FLowFile content together.
+   - Place a MergeContent or MergeRecord (Version >= 1.4) processor before putJdbc to merge FLowFile content together.
 
 #### Fill different tables with one processor instance. If you have limited the number of concurrently running threads of this processor but have to fill different tables with different preparation, ELT, insert statement etc.
-   - Place an UpdateAttributes processor before putJdbcBulk to set attributes for all scripts and for the insert statement
-   - Use the attributes in the corresponding properties of putJdbcBulk
-   - You can use %TABLE_ID% and %COMMIT_EPOCH% to name the loading table uniquely.
+   - Place an UpdateAttributes processor before putJdbc to set attributes for all scripts and for the insert statement
+   - Use the attributes in the corresponding properties of putJdbc
+   - You can use `%TABLE_ID%` and `%COMMIT_EPOCH%` to name the loading table uniquely.
 
 #### AVRO schema of script relationship
-   - The outgoing script contains timing information (Elapsed times) and TABLE_ID, COMMIT_EPOCH plus result sets and update counts returned by the scripts and insert statement. The information given back from SQL statements is taken as is.
+   - The outgoing script contains timing information (Elapsed times) and `%TABLE_ID%`, `%COMMIT_EPOCH%` plus result sets and update counts returned by the scripts and insert statement. The information given back from SQL statements is taken as is.
    - It is created when the connecting script returns, after each loading sequence (after loading script finished) and right after the disconnecting script returns. If any of the scripts are empty, the FlowFile is still produced but will be empty.
