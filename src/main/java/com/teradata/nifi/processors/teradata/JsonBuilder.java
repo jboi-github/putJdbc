@@ -43,13 +43,13 @@ public class JsonBuilder {
         // Execute script, read result set and update counts
         JSONArray resultSetsJson = new JSONArray();
         for(boolean isRows = statement.execute(script);; isRows = statement.getMoreResults()) {
-            PutContentCsv.logWarnings(statement, logger);
+            PutContent.logWarnings(statement, logger);
             JSONObject resultSetJson = new JSONObject();
 
             if(isRows) {
                 JSONArray rowsJson = new JSONArray();
                 try (ResultSet resultSet = statement.getResultSet()) {
-                    PutContentCsv.logWarnings(resultSet, logger);
+                    PutContent.logWarnings(resultSet, logger);
 
                     ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
 

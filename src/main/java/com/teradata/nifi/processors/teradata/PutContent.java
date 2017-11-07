@@ -5,14 +5,18 @@ import org.apache.nifi.logging.ComponentLog;
 import org.json.JSONObject;
 
 import java.io.Closeable;
-import java.io.InputStream;
+import java.io.IOException;
 import java.sql.*;
 
 /**
  * Keeps a connection to the database and processes FlowFile by FlowFile using
  * Teradata's Fastload-CSV capability.
  */
-public class PutContentCsv implements AutoCloseable {
+public class PutContent implements AutoCloseable {
+    @FunctionalInterface
+    public interface FlowFileProcessor {
+        int process(PreparedStatement statement) throws SQLException, IOException;
+    }
     private Connection primary;
     private String beforeDisconnecting;
     private AdditionalAttributes attributes;
@@ -26,7 +30,7 @@ public class PutContentCsv implements AutoCloseable {
      * @param logger to log messages, warnings.
      * @throws SQLException When database error occurred.
      */
-    PutContentCsv(
+    PutContent(
             DBCPService connectionPoolPrimary,
             String afterConnected, String beforeDisconnecting,
             AdditionalAttributes attributes, ComponentLog logger) throws SQLException
@@ -42,9 +46,8 @@ public class PutContentCsv implements AutoCloseable {
     }
 
     /**
-     * @param in stream to read CSV from. First line contains header.
      * @param size of input stream.
-     * @param connectionPoolLoading to get connection for loading.
+     * @param connectionPoolLoading to get connection for loading. If null then primary is used for loading.
      * @param beforeLoading script containing SQL statements to be executed before loading on primary connection.
      * @param insertStatement for loading rows on loading connection.
      * @param afterLoaded script containing SQL statements to be executed after loaded on primary connection.
@@ -52,15 +55,17 @@ public class PutContentCsv implements AutoCloseable {
      * @throws SQLException When database error occurred.
      */
     JSONObject process(
-            InputStream in, long size, DBCPService connectionPoolLoading,
-            String beforeLoading, String insertStatement, String afterLoaded) throws SQLException
-    {
+            long size, DBCPService connectionPoolLoading,
+            String beforeLoading, String insertStatement, String afterLoaded,
+            FlowFileProcessor flowFileProcessor) throws SQLException, IOException {
         JsonBuilder json = new JsonBuilder(logger);
         executeScript(json, beforeLoading, "beforeLoading");
 
         long start = System.currentTimeMillis();
         int updateCount;
-        try(Connection loading = connectionPoolLoading.getConnection()) {
+        Connection loading = (connectionPoolLoading != null)? connectionPoolLoading.getConnection():primary;
+        if(connectionPoolLoading != null) loading.setAutoCommit(false);
+        try {
             // Connect
             logWarnings(loading, logger);
             loading.setAutoCommit(false);
@@ -69,16 +74,21 @@ public class PutContentCsv implements AutoCloseable {
             try (PreparedStatement preparedStatement = loading.prepareStatement(insertStatement)) {
                 logWarnings(preparedStatement, logger);
 
-                preparedStatement.setAsciiStream(1, in, -1);
-                logWarnings(preparedStatement, logger);
-
-                updateCount = preparedStatement.executeUpdate();
+                updateCount = flowFileProcessor.process(preparedStatement);
                 logWarnings(preparedStatement, logger);
             }
 
             // Disconnect
             if(!loading.getAutoCommit()) loading.commit();
             logWarnings(loading, logger);
+        } catch (SQLException | IOException e) {
+            if(connectionPoolLoading != null && !loading.getAutoCommit()) loading.rollback();
+            throw e;
+        } finally {
+            if(connectionPoolLoading != null) {
+                if(!loading.getAutoCommit()) loading.commit();
+                loading.close();
+            }
         }
         long stop = System.currentTimeMillis();
         JSONObject loadJson = new JSONObject();
@@ -191,7 +201,7 @@ public class PutContentCsv implements AutoCloseable {
      * @throws SQLException whenever an error occurred while working with DB. Warnings are logged but not thrown.
      */
     static void logWarnings(ResultSet resultSet, ComponentLog logger) throws SQLException {
-        PutContentCsv.logWarnings(resultSet.getWarnings(), logger);
+        PutContent.logWarnings(resultSet.getWarnings(), logger);
         resultSet.clearWarnings();
     }
 
@@ -201,7 +211,7 @@ public class PutContentCsv implements AutoCloseable {
      */
     private static void logWarnings(SQLWarning warning, ComponentLog logger) throws SQLException {
         for(; warning != null; warning = warning.getNextWarning()) {
-            logger.warn(
+            logger.info(
                     "{} (SQL State = {}), (error code = {})",
                     new Object[] {warning.getMessage(), warning.getSQLState(), warning.getErrorCode()});
         }
