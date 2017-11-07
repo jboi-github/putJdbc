@@ -52,12 +52,12 @@ Each loading works in one of three possible ways:
 
 ### Special use cases and considerations:
 #### commit, rollback and exception handling
-    - If only one connection is given, **putJdbc** does not explicitly commit the database. It assumes, that a database commit is done as part of the after loading script.
-    - If an explicit loading connection is given, this connections is set to AutoCommit off at the beginning, silently ignoring if thsi si not supported by the database. At the end of loading a database commit is issued, if AutoCommit is actually off.
-    - The NIFI session is committed, when the after loading script has finished successfully. The idea is, that the data is accessible for the user at this point in time. Before that, the data might be loaded into a loading table, but is not visible to the user. On the other hand, if the loading runs directly into a user accessible table, the after loading script will do most likely only issue a database commit. In this case the NIFI commit happens directly after the database commit. 
-    - Whenever a SQLException is thrown, it issues a rollback on all open database connections of the instance of **putJdbc** and also a rollback on the NIFI session. This causes the current FlowFile to be pushed back into the queue for rework. The processor yields unless the SQLException indicates, to retry the command immediately.
-    - All database Warnings and Exceptions are written to the log with the appropriate level.
-    - Whenever an Exception is thrown during the parsing of the incoming FlowFile, it penalises and transfers the FlowFile to the failure relationship.
+   - If only one connection is given, **putJdbc** does not explicitly commit the database. It assumes, that a database commit is done as part of the after loading script.
+   - If an explicit loading connection is given, this connections is set to AutoCommit off at the beginning, silently ignoring if thsi si not supported by the database. At the end of loading a database commit is issued, if AutoCommit is actually off.
+   - The NIFI session is committed, when the after loading script has finished successfully. The idea is, that the data is accessible for the user at this point in time. Before that, the data might be loaded into a loading table, but is not visible to the user. On the other hand, if the loading runs directly into a user accessible table, the after loading script will do most likely only issue a database commit. In this case the NIFI commit happens directly after the database commit. 
+   - Whenever a SQLException is thrown, it issues a rollback on all open database connections of the instance of **putJdbc** and also a rollback on the NIFI session. This causes the current FlowFile to be pushed back into the queue for rework. The processor yields unless the SQLException indicates, to retry the command immediately.
+   - All database Warnings and Exceptions are written to the log with the appropriate level.
+   - Whenever an Exception is thrown during the parsing of the incoming FlowFile, it penalises and transfers the FlowFile to the failure relationship.
 
 - `%TABLE_ID%` and `%COMMIT_EPOCH%`
     - All occurrences of this text in all scripts and the insert statement are replaced by:
