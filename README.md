@@ -1,5 +1,5 @@
 # putJdbc (putJdbcCsv, putJdbc)
-putJdbc is a NIFI Processor for bulk loading data into a database. It is tested for extreme amount of data. With an approach that fits seamlessly into NIFI it has the ability to interact with the database to control ETL/ELT jobs as well as special parametrization of bulk-load-connections. It takes a FlowFile, then executes a sequence of scripts and a load commands to load and transform data. With a number of options it is able to be configured using the best practice approaches for very large databases and high speed ingestion. See the usage page for the optimal configuration for your database. 
+**putJdbc** is a NIFI Processor for bulk loading data into a database. It is tested for extreme amount of data. With an approach that fits seamlessly into NIFI it has the ability to interact with the database to control ETL/ELT jobs as well as special parametrization of bulk-load-connections. It takes a FlowFile, then executes a sequence of scripts and a load command to load and transform data. With a number of options it is able to be configured using the best practice approaches for very large databases and high speed ingestion. See the usage page for the optimal configuration for your database.
 
 The processor comes in two flavours:
 - **putJdbc** allows a parameterized insert statement to load into database. The input can be any record oriented data, that a RecordReader can parse.
@@ -26,7 +26,7 @@ For more details see the usage page of these processors in Nifi.
 
 Done!
 
-Now you should be able to configure the first `putJdbc` processor.
+Now you should be able to configure th`e first **putJdbc** processor.
 
 ## Configure your first putJdbc processor
 yet to come...
@@ -46,9 +46,9 @@ When NIFI triggers the processor, it loops over the FlowFiles in the incoming qu
 5. Disconnect
 
 Each loading works in one of three possible ways:
-- `putJdbcCsv`: The processor connects to the loading connection, binds the content of the FlowFile (must be CSV) to JDBC and executes the FlowFile as batch. After that the loading is committed.
-- `putJdbc` with `Build Batch Strategy` set to `RecordReader as batch`: If an additional connection for loading is defined, the processor connects to the loading connection. Otherwise it uses he primary connection for loading. The `insert statement` is preapred and the FLowFile content parsed with the given `RecordReader`. Each field in each parsed record is bound on the corresponding parameter as defined by the properties `record-field-name.N`. It then executes the FlowFile as batch and the loading is committed.
-- `putJdbc` with `Build Batch Strategy` set to `RecordReader as row-by-row`: If an additional connection for loading is defined, the processor connects to the loading connection. Otherwise it uses he primary connection for loading. The `insert statement` is preapred and the FLowFile content parsed with the given `RecordReader`. Each field in each parsed record is bound on the corresponding parameter as defined by the properties `record-field-name.N`. It executes the batch after each record. When all records in the FlowFile are processed the loading is committed.
+- **putJdbcCsv**: The processor connects to the loading connection, binds the content of the FlowFile (must be CSV) to JDBC and executes the FlowFile as batch. After that the loading is committed.
+- **putJdbc** with `Build Batch Strategy` set to `RecordReader as batch`: If an additional connection for loading is defined, the processor connects to the loading connection. Otherwise it uses he primary connection for loading. The `insert statement` is preapred and the FLowFile content parsed with the given `RecordReader`. Each field in each parsed record is bound on the corresponding parameter as defined by the properties `record-field-name.N`. It then executes the FlowFile as batch and the loading is committed.
+- **putJdbc** with `Build Batch Strategy` set to `RecordReader as row-by-row`: If an additional connection for loading is defined, the processor connects to the loading connection. Otherwise it uses he primary connection for loading. The `insert statement` is preapred and the FLowFile content parsed with the given `RecordReader`. Each field in each parsed record is bound on the corresponding parameter as defined by the properties `record-field-name.N`. It executes the batch after each record. When all records in the FlowFile are processed the loading is committed.
 
 ### Special use cases and considerations:
 #### commit, rollback and exception handling
@@ -63,37 +63,41 @@ Each loading works in one of three possible ways:
 - All occurrences of this text in all scripts and the insert statement are replaced by:
   - `%TABLE_ID%` is a 10 characters long random value consisting of the 10 digits and 26 lower case characters. It is build once when the processor starts and before it connects to the database. This number can have up to 3.6e15 different values and is built every time the processor starts a thread and kept as long as there’re Flowfiles in the queue. If you would connect every minute with 100 threads in parallel it would take about 58 Mio years to have a conflict on `%TABLE_ID%` with 50% probability. It’s seeded to the current time in nano seconds, a hash of the ip address and the current thread id. Therefore it's very likely, that each thread on each server in a NIFI cluster has a different seed, producing a different `%TABLE_ID%`. Even with the extremely rare cases of conflicting `%TABLE_ID%`’s it is good practise to have some code in the connected- or the before loading script to fail, if the `%TABLE_ID%` is already in use.
   - `%COMMIT_EPOCH%` is a count of the number of loadings happened within the current connection. For the first loading, this number is 0, the second loading get 1 and so on. `%COMMIT_EPOCH%` is always 0 for the connect script and contains the number of successful loadings in the disconnecting script.
-  - Both values are available as text so they can be easily used as placeholders in an UpdateAttribute processor as described below. They’re also available as attributes in the FlowFile and set as attributes in the original FlowFile and the FlowFile transferred to the script relationship.
+- Both values are available as text so they can be easily used as placeholders in an UpdateAttribute processor as described below. They’re also available as attributes in the FlowFile and set as attributes in the original FlowFile and the FlowFile transferred to the script relationship.
      
 #### **Teradata CSV**
 - Define two separated connections and set “build one batch” to “CSV”
-- The connection for loading must contain TYPE=FASTLOADCSV in the URL. It can optionally contain additional parameters, eg. for Sessions, Charset, Ansi-Mode or delimiter of the CSV
+- The connection for loading must contain `TYPE=FASTLOADCSV in the URL. It can optionally contain additional parameters, eg. for Sessions, Charset, Ansi-Mode or delimiter of the CSV
 - Make sure the incoming FLowFile contains CSV content, that is delimited by the delimiter defined in the URL, the fields are not quoted nor are delimiter escaped accordingly to the requirements of the Teradata JDBC driver.
-- For more information about the Teradata Fastload-CSV capability have a look [here / Teradata-JDBC Docs](http://developer.teradata.com/doc/connectivity/jdbc/reference/current/frameset.html) and [here / speed up JDBC connection](http://developer.teradata.com/connectivity/articles/speed-up-your-jdbcodbc-applications)
+- For more information about the Teradata Fastload-CSV capability have a look at [Teradata-JDBC Docs](http://developer.teradata.com/doc/connectivity/jdbc/reference/current/frameset.html) and [speed up JDBC connection](http://developer.teradata.com/connectivity/articles/speed-up-your-jdbcodbc-applications)
 - In order to prepare the data into a large CSV file (with which Teradata-Fastload-CSV works best) you might want to setup a flow of:
-  - Some `ConvertRecord` with a `RecordReader` that reads and parses your input and a `FreeFormRecordSetWriter` that writes your data with the right delimiter, might replace the delimiter character in string fields with any other character and does some optional other conversions. The data consists then of small packages of CSV records without header.
-  - Use a `MergeContent` with binary concatenation to collect into some reasonable large FlowFiles. Use Text and header field to add the column names in the loading table on top of the FlowFile
-  - Pass the FlowFile into **putJdbcCsv**. Optionally use the strategy to fill different tables with one processor instance (see below) by adding an `UpdateAttribute` processor in front of **putJdbcCsv**.
+  - Some `ConvertRecord` with a `RecordReader` that reads and parses your input and a `FreeFormRecordSetWriter` that writes your data with the right delimiter, might replace the delimiter character in string fields with any other character and does some optional other conversions. The data consists then of small packages of CSV records without header.
+  - Use a `MergeContent` with binary concatenation to collect into some reasonable large FlowFiles. Use Text and header field to add the column names in the loading table on top of the FlowFile
+  - Pass the FlowFile into **putJdbcCsv**. Optionally use the strategy to fill different tables with one processor instance (see below) by adding an `UpdateAttribute` processor in front of **putJdbcCsv**.
 
-#### **sqlite bulk load** handles larger amounts of rows best, when using a row-by-row insert, that was prepared and is only committed once per batch.
+#### **sqlite bulk load** handles larger amounts of rows best, when...
+using a row-by-row insert, that was prepared and is only committed once per batch.
 - Define one connection and set `build batch Strategy` to `By RecordReader row-by-row`
 - In connected-script: Optionally set some Pragmas
 - In before loading script: `begin transaction`
 - In after loading script: `commit` and optionally before or after the commit additional ELT.
 
-#### Limit number of simultaneously running bulk loads. If your database has a limit on simultaneously running bulk load jobs or you want to make sure, that your database does not get overloaded. But still want to run ELT jobs in parallel to loading.
+#### Limit number of simultaneously running bulk loads.
+If your database has a limit on simultaneously running bulk load jobs or you want to make sure, that your database does not get overloaded. But still want to run ELT jobs in parallel to loading.
 - Set number of threads of the processor to at least two, so that one processor can run ELT while another thread loads data.
 - Use an extra Connection Pool Service Controller for the loading connection
 - In this extra Connection Pool Service for the loading connection, limit the number of connections to 1 and set timeout as high as one loading might need to run. You might want to add some extra time to the timeout, just in case.
 
-#### Make sure FlowFiles contain a minimum number of rows as bulk loads usually profit from larger number of rows
-- Place a MergeContent or MergeRecord (Version >= 1.4) processor before putJdbc to merge FLowFile content together.
+#### Make sure FlowFiles contain a minimum number of rows
+as bulk loads usually profit from larger number of rows
+- Place a MergeContent or MergeRecord (Nifi Version >= 1.4) processor before **putJdbc** to merge FlowFile content together.
 
-#### Fill different tables with one processor instance. If you have limited the number of concurrently running threads of this processor but have to fill different tables with different preparation, ELT, insert statement etc.
-- Place an UpdateAttributes processor before putJdbc to set attributes for all scripts and for the insert statement
-- Use the attributes in the corresponding properties of putJdbc
+#### Fill different tables with one processor instance.
+If you have limited the number of concurrently running threads of **putJdbc** but have to fill different tables with different preparation, ELT, insert statement etc.
+- Place an `UpdateAttributes processor before **putJdbc** to set attributes for all scripts and for the insert statement
+- Use the attributes in the corresponding properties of **putJdbc**
 - You can use `%TABLE_ID%` and `%COMMIT_EPOCH%` to name the loading table uniquely.
 
 #### AVRO schema of script relationship
 - The outgoing script contains timing information (Elapsed times) and `%TABLE_ID%`, `%COMMIT_EPOCH%` plus result sets and update counts returned by the scripts and insert statement. The information given back from SQL statements is taken as is.
-- It is created when the connecting script returns, after each loading sequence (after loading script finished) and right after the disconnecting script returns. If any of the scripts are empty, the FlowFile is still produced but will be empty.
+- It is created after each loading sequence (after-script finished).
